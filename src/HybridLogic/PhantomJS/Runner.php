@@ -21,8 +21,9 @@ class Runner {
 
 	/**
 	 * @var bool If true, all Command output is returned verbatim
+	 * Defaulting this to true as it's more useful on than off
 	 **/
-	private $debug = false;
+	private $debug = true;
 
 
 	/**
@@ -34,7 +35,14 @@ class Runner {
 	 **/
 	public function __construct($bin = null, $debug = null) {
 		if($bin !== null) $this->bin = $bin;
-		if($debug !== null) $this->debug = $debug;
+		if($debug !== null) $this->debug = true;
+
+		//Exec enabled test
+		$disabled = explode(',', ini_get('disable_functions'));
+		if(in_array('exec', $disabled) && $debug !== 'test'){
+			trigger_error("'exec' appears to be disabled on this server. Pass 'test' in \$debug to run anyway", E_USER_ERROR);
+		}
+
 	} // end func: __construct
 
 
@@ -49,14 +57,13 @@ class Runner {
 	 *
 	 *     $command->execute('/path/to/my/script.js', 'arg1', 'arg2'[, ...])
 	 *
-	 * The script tries to automatically decodde JSON
+	 * The script tries to automatically decode JSON
 	 * objects if the first character returned is a left
 	 * curly brace ({).
 	 *
 	 * If debug mode is enabled, this method will return
 	 * the output of the command verbatim along with any
-	 * errors printed out to the shell. Don't use this mode
-	 * in production.
+	 * errors printed out to the shell.
 	 *
 	 * @param string Script file
 	 * @param string Arg, ...
@@ -70,8 +77,12 @@ class Runner {
 		if($this->debug) $cmd .= ' 2>&1';
 
 		// Execute
-		$result = shell_exec($cmd);
-		if($this->debug) return $result;
+		exec($cmd, $result);
+		if($this->debug) {
+			$result[] = 'Executed Command:';
+			$result[] = $cmd;
+			return $result;
+		}
 		if($result === null) return false;
 
 		// Return
@@ -82,6 +93,22 @@ class Runner {
 
 	} // end func: execute
 
+	/**
+	 * Tests if phantomjs is currently running
+	 * @return boolean true if phantomjs is running
+	 */
+	public function isRunning(){
+	    try {
+	        $process = 'phantomjs';
+			$escaped_command = escapeshellcmd("ps -C " . escapeshellarg($process)) . " | awk '{ print $1}' ";
+			echo $escaped_command;
+			exec($escaped_command, $result);
+	        if( count($result) > 2){
+	            return true;
+	        }
+	    }catch(Exception $e){} //Why?
 
+	    return false;
+	}
 
 } // end class: Runner
