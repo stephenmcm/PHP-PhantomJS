@@ -12,7 +12,6 @@ namespace HybridLogic\PhantomJS;
  **/
 class Runner {
 
-
 	/**
 	 * @var string Path to phantomjs binary
 	 **/
@@ -20,22 +19,31 @@ class Runner {
 
 
 	/**
-	 * @var bool If true, all Command output is returned verbatim
-	 * Defaulting this to true as it's more useful on than off
+	 * @var String currently just allow forced execution
+	 * Probably should be removed
 	 **/
-	private $debug = true;
+	private $debug = null;
 
 
 	/**
-	 * Constructor
 	 *
 	 * @param string Path to phantomjs binary
 	 * @param bool Debug mode
 	 * @return void
-	 **/
+	 * @throws \RuntimeException If bin not found
+	 */
 	public function __construct($bin = null, $debug = null) {
 		if($bin !== null) $this->bin = $bin;
 		if($debug !== null) $this->debug = true;
+
+		if(!file_exists($this->bin)){
+		    throw new \RuntimeException('PhantomJS Executable not found. Looked in: '.$this->bin);
+		}
+		
+		if(!is_executable($this->bin)){
+		    throw new \RuntimeException('PhantomJS Executable not executable. The web server (usually www-data) needs'
+										. ' execute premissions for the PhantomJS binary.');
+		}
 
 		//Exec enabled test
 		$disabled = explode(',', ini_get('disable_functions'));
@@ -57,17 +65,9 @@ class Runner {
 	 *
 	 *     $command->execute('/path/to/my/script.js', 'arg1', 'arg2'[, ...])
 	 *
-	 * The script tries to automatically decode JSON
-	 * objects if the first character returned is a left
-	 * curly brace ({).
-	 *
-	 * If debug mode is enabled, this method will return
-	 * the output of the command verbatim along with any
-	 * errors printed out to the shell.
-	 *
 	 * @param string Script file
 	 * @param string Arg, ...
-	 * @return bool/array False of failure, JSON array on success
+	 * @return array From exec command
 	 **/
 	public function execute($script) {
 
@@ -78,18 +78,10 @@ class Runner {
 
 		// Execute
 		exec($cmd, $result);
-		if($this->debug) {
-			$result[] = 'Executed Command:';
-			$result[] = $cmd;
-			return $result;
-		}
-		if($result === null) return false;
 
-		// Return
-		if(substr($result, 0, 1) !== '{') return $result; // not JSON
-		$json = json_decode($result, $as_array = true);
-		if($json === null) return false;
-		return $json;
+		$result[] = 'Executed Command:';
+		$result[] = $cmd;
+		return $result;
 
 	} // end func: execute
 
