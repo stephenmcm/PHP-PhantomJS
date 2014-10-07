@@ -74,7 +74,7 @@ class Runner {
 		// Escape
 		$args = func_get_args();
 		$cmd = escapeshellcmd("{$this->bin} " . implode(' ', $args));
-		if($this->debug) $cmd .= ' 2>&1';
+		$cmd .= ' 2>&1';
 
 		// Execute
 		exec($cmd, $result);
